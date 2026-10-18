@@ -1,0 +1,22 @@
+version: 2
+
+sources:
+  - name: tpch
+    description: Snowflake 샘플 데이터(TPC-H, 소규모). 사용자에게 열지 않는 원천 역할.
+    database: SNOWFLAKE_SAMPLE_DATA
+    schema: TPCH_SF1
+    tables:
+      - name: customer
+        columns:
+          - name: c_custkey
+            data_tests: [unique, not_null]
+      - name: orders
+        columns:
+          - name: o_orderkey
+            data_tests: [unique, not_null]
+          - name: o_custkey
+            data_tests:
+              - not_null
+              - relationships:
+                  to: source('tpch', 'customer')
+                  field: c_custkey

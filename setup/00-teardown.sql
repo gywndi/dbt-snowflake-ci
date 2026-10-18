@@ -1,0 +1,28 @@
+-- dbt 관련 Snowflake 객체를 전부 지우고 처음 상태로 되돌린다. 관리자 연결(ACCOUNTADMIN)로 실행한다.
+--   snow sql -c admin -f setup/00-teardown.sql
+-- SNOWFLAKE_SAMPLE_DATA(공유 DB)는 건드리지 않는다.
+
+USE ROLE ACCOUNTADMIN;
+
+-- 데이터베이스 (안의 스키마·뷰까지 함께 삭제)
+DROP DATABASE IF EXISTS DBT_DEV;
+DROP DATABASE IF EXISTS DBT_PROD;
+
+-- 웨어하우스
+DROP WAREHOUSE IF EXISTS DBT_WH;
+
+-- 유저 (롤보다 먼저 지운다. 로그인 유저 DBT_USER는 새 롤 DBT_USER와 이름이 겹친다)
+DROP USER IF EXISTS DBT_USER;
+DROP USER IF EXISTS SVC_DBT;
+
+-- 롤
+DROP ROLE IF EXISTS DBT_ROLE;
+DROP ROLE IF EXISTS DBT_READER;
+DROP ROLE IF EXISTS DBT_APP;
+DROP ROLE IF EXISTS DBT_USER;
+
+-- 확인: 모두 비어 있어야 한다
+SHOW DATABASES LIKE 'DBT%';
+SHOW WAREHOUSES LIKE 'DBT%';
+SHOW USERS LIKE '%DBT%';
+SHOW ROLES LIKE '%DBT%';

@@ -1,0 +1,33 @@
+# dbt 검증·배포 파이프라인. Snowflake 접속 비밀번호는 CI 변수 SNOWFLAKE_PASSWORD(Masked)로 받는다.
+# 계정/유저는 profiles.yml의 기본값을 쓴다.
+
+image: python:3.12-slim
+
+stages:
+  - validate
+  - deploy
+
+default:
+  before_script:
+    # requirements.txt로 고정한 dbt 버전을 설치
+    - pip install --quiet -r requirements.txt
+
+# MR과 main에서 개발 환경(DBT_DEV.DEV)에 뷰를 만들고 테스트한다
+validate:
+  stage: validate
+  script:
+    - dbt debug --target dev
+    - dbt run --target dev
+    - dbt test --target dev
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+# main에서만 운영 환경(DBT_PROD.MART)에 배포한다
+deploy:
+  stage: deploy
+  script:
+    - dbt run --target prod
+    - dbt test --target prod
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH

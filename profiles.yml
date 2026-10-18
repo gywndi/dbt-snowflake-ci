@@ -1,0 +1,25 @@
+snowflake_dbt:
+  target: dev
+  outputs:
+    # 개발: dbt가 DBT_DEV에 스키마를 직접 만든다
+    dev:
+      type: snowflake
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT', '<org>-<account>') }}"
+      user: "{{ env_var('SNOWFLAKE_USER', 'SVC_DBT') }}"
+      password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
+      role: DBT_APP
+      warehouse: DBT_WH
+      database: DBT_DEV
+      schema: DEV
+      threads: 4
+    # 운영: 미리 만들어 둔 DBT_PROD.MART에 뷰만 만든다
+    prod:
+      type: snowflake
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT', '<org>-<account>') }}"
+      user: "{{ env_var('SNOWFLAKE_USER', 'SVC_DBT') }}"
+      password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
+      role: DBT_APP
+      warehouse: DBT_WH
+      database: DBT_PROD
+      schema: MART
+      threads: 4
