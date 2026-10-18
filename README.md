@@ -144,10 +144,22 @@ dbt test
 
 ### 파이프라인
 
+dbt 관련 파일(`models/`, `macros/`, `seeds/`, `snapshots/`, `tests/`, `dbt_project.yml`, `profiles.yml`, `ci/`, `.gitlab-ci.yml`)이 바뀐 경우에만 작업이 만들어진다. README나 `setup/`만 바꾸는 커밋은 파이프라인을 돌리지 않는다.
+
 | 작업 | 실행 조건 | 하는 일 |
 |---|---|---|
-| `validate` | MR, `main` | `dbt debug --connection`, `dbt run`, `dbt test`를 `dev` 타깃에서 실행 |
-| `deploy` | `main` | `dbt run`, `dbt test`를 `prod` 타깃에서 실행 |
+| `validate` | MR, `main` (dbt 파일 변경 시) | 개발 환경(`dev` 타깃)에서 Slim CI로 `dbt build` |
+| `deploy` | `main` (dbt 파일 변경 시) | 운영 환경(`prod` 타깃)에서 전체 `dbt build`, 끝나면 `target/manifest.json`을 산출물로 남긴다 |
+
+### Slim CI
+
+`validate`는 모든 모델을 빌드하지 않고, 운영 대비 바뀐 모델과 그 하위만 빌드한다.
+
+1. `ci/fetch-prod-state.py`가 `main`의 마지막 성공 `deploy` 작업 산출물에서 `manifest.json`을 `prod-state/`로 받는다(CI 작업 토큰 사용).
+2. 받았으면 `dbt build --target dev --select "state:modified+" --defer --state prod-state`를 실행한다. 바뀌지 않은 상위 모델은 빌드하지 않고 운영 객체를 가리킨다.
+3. 못 받으면(첫 실행이거나 산출물이 만료됨) 전체를 `dbt build`한다.
+
+dbt 1.9에서 오프라인으로 시험했다. 운영 타깃으로 만든 manifest와 개발 타깃의 현재 코드를 비교했을 때, 코드 변경이 없으면 선택되는 모델이 없고, 모델 하나를 고치면 그 모델만 선택됐다. 타깃이 달라 스키마가 다른 것은 변경으로 잡히지 않았다. Snowflake에 연결한 실제 파이프라인 실행은 아직 하지 않았다.
 
 - 작업 이미지는 dbt 공식 이미지 `ghcr.io/dbt-labs/dbt-snowflake:1.9.latest`다. dbt가 미리 설치되어 있어서 작업마다 `pip install`을 하지 않는다. 이미지의 진입점이 `dbt`라서 `entrypoint: [""]`로 비워 스크립트를 실행한다.
 - Runner는 k8s 클러스터 안의 Kubernetes executor다. CI 작업마다 파드가 하나 떠서 실행하고 사라진다. 태그를 지정하지 않아도 받는다.

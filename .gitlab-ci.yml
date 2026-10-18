@@ -1,5 +1,6 @@
 # dbt 검증·배포 파이프라인. Snowflake 접속 비밀번호는 CI 변수 SNOWFLAKE_PASSWORD(Masked)로 받는다.
 # 계정/유저는 profiles.yml의 기본값을 쓴다.
+# dbt 관련 파일이 바뀐 경우에만 돈다. 검증은 Slim CI라서 운영 대비 바뀐 모델과 그 하위만 빌드한다.
 
 # dbt 공식 이미지(dbt 1.9). 이미지의 기본 진입점이 dbt라서 비워야 스크립트가 실행된다
 image:
@@ -10,22 +11,49 @@ stages:
   - validate
   - deploy
 
-# MR과 main에서 개발 환경(DBT_DEV.DEV)에 뷰를 만들고 테스트한다
+# 이 경로의 파일이 바뀐 경우에만 파이프라인 작업이 만들어진다
+.dbt-paths: &dbt-paths
+  - models/**/*
+  - macros/**/*
+  - seeds/**/*
+  - snapshots/**/*
+  - tests/**/*
+  - dbt_project.yml
+  - profiles.yml
+  - ci/**/*
+  - .gitlab-ci.yml
+
+# MR과 main에서 개발 환경(DBT_DEV.DEV)에 바뀐 모델만 빌드한다 (Slim CI)
 validate:
   stage: validate
+  interruptible: true
   script:
     - dbt debug --connection --target dev
-    - dbt run --target dev
-    - dbt test --target dev
+    # 운영 배포가 남긴 manifest를 받는다. 없으면 prod-state/가 만들어지지 않는다
+    - python ci/fetch-prod-state.py
+    - |
+      if [ -f prod-state/manifest.json ]; then
+        # 운영 대비 바뀐 모델과 하위만 빌드하고, 바뀌지 않은 상위 참조는 운영 객체를 가리킨다
+        dbt build --target dev --select "state:modified+" --defer --state prod-state
+      else
+        dbt build --target dev
+      fi
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes: *dbt-paths
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *dbt-paths
 
-# main에서만 운영 환경(DBT_PROD.MART)에 배포한다
+# main에서만 운영 환경(DBT_PROD.MART)에 전체를 배포하고, 다음 Slim CI의 기준이 될 manifest를 남긴다
 deploy:
   stage: deploy
+  resource_group: dbt_prod
   script:
-    - dbt run --target prod
-    - dbt test --target prod
+    - dbt build --target prod
+  artifacts:
+    paths:
+      - target/manifest.json
+    expire_in: 30 days
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *dbt-paths
