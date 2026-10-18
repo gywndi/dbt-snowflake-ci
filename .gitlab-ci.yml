@@ -16,7 +16,7 @@ default:
 validate:
   stage: validate
   script:
-    - dbt debug --target dev
+    - dbt debug --connection --target dev
     - dbt run --target dev
     - dbt test --target dev
   rules:
