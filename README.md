@@ -20,7 +20,7 @@ DBT_USER 롤 (조회 전용, 사람 또는 앱 계정에 부여)
 
 | 요소 | 값 | 역할 |
 |---|---|---|
-| dbt | dbt-core 1.12.6, dbt-snowflake 1.12.3 | SQL 모델 실행·테스트 |
+| dbt | 로컬 dbt-core 1.12.6 / dbt-snowflake 1.12.3, CI는 공식 이미지의 dbt 1.9 | SQL 모델 실행·테스트 |
 | 원천 | `SNOWFLAKE_SAMPLE_DATA.TPCH_SF1` | Snowflake 샘플 데이터(공유 DB). 실제 원천은 아직 정하지 않았다 |
 | 롤 `DBT_APP` | 원천 읽기 + 결과 생성 | dbt 애플리케이션이 쓰는 롤 |
 | 롤 `DBT_USER` | 결과 조회만 | 사용자에게 여는 롤. 원천 권한이 없다 |
@@ -149,7 +149,7 @@ dbt test
 | `validate` | MR, `main` | `dbt debug --connection`, `dbt run`, `dbt test`를 `dev` 타깃에서 실행 |
 | `deploy` | `main` | `dbt run`, `dbt test`를 `prod` 타깃에서 실행 |
 
-- 작업 이미지는 `python:3.12-slim`이고, `requirements.txt`로 dbt를 설치한다.
+- 작업 이미지는 dbt 공식 이미지 `ghcr.io/dbt-labs/dbt-snowflake:1.9.latest`다. dbt가 미리 설치되어 있어서 작업마다 `pip install`을 하지 않는다. 이미지의 진입점이 `dbt`라서 `entrypoint: [""]`로 비워 스크립트를 실행한다.
 - Runner는 k8s 클러스터 안의 Kubernetes executor다. CI 작업마다 파드가 하나 떠서 실행하고 사라진다. 태그를 지정하지 않아도 받는다.
 - 비밀번호는 프로젝트 CI 변수 `SNOWFLAKE_PASSWORD`(Masked)로 주입한다. `Protected`는 껐다. MR 파이프라인에서도 써야 해서다.
 - `Masked` 변수는 사용할 수 있는 문자에 제한이 있다. 영문 대소문자와 숫자 위주로 정하면 안전하다.
@@ -163,6 +163,8 @@ dbt test
 
 ## 7. 알려진 이슈
 
+- **로컬(1.12.6)과 CI(1.9) 버전이 다르다.** 공식 이미지의 태그가 `1.9.latest`(2024-12 빌드)에서 멈춰 있어서 최신 버전 이미지가 없다. 1.9는 더 이상 정기 패치를 받지 않는 버전이다. 모델 SQL과 설정은 두 버전에서 모두 파싱되도록 맞췄다.
+- **테스트 인자(`relationships`의 `to`, `field`)는 `arguments:` 없이 쓴다.** `arguments:`는 1.9에서 컴파일 오류가 난다. 1.12에서는 대신 deprecation 경고가 나온다.
 - **새 비밀번호가 `MIN_LENGTH`로 거부된다.** 계정에 사용자 정의 정책이 없어도 최소 길이 요건이 있다. 대소문자와 숫자를 섞은 16자 이상으로 정하면 통과했다.
 - **`ACCOUNTADMIN`에서 CI가 만든 객체가 안 보인다.** 객체 소유자가 `DBT_APP`이라서 `ACCOUNTADMIN`에는 권한이 없다. 커스텀 롤을 `SYSADMIN` 아래에 부여하거나 `USE ROLE DBT_APP`으로 전환해서 조회한다.
 - **CI에서 `dbt debug`가 `git` 의존성 점검으로 실패한다.** 작업 이미지에 `git`이 없다. `--connection` 옵션으로 연결 점검만 한다.
@@ -177,6 +179,7 @@ dbt test
 | 배포 롤 분리 | `dev`와 `prod`가 같은 `DBT_APP` | 운영 배포 전용 롤(`DBT_PROD`에만 권한)로 분리해서 MR 파이프라인이 운영을 건드리지 못하게 한다 |
 | MR 검증 | 공용 개발 스키마 `DBT_DEV.DEV` | MR별 임시 스키마를 만들고 닫힌 뒤 삭제 |
 | 사용자 계정 | 롤 `DBT_USER`만 준비 | 사람은 SSO/SCIM 그룹을 롤에 매핑. 앱은 서비스 계정에 롤만 부여 |
+| CI 이미지 | 공식 이미지 1.9 (패치 종료 버전) | 버전을 올려야 하면 `requirements.txt`로 dbt를 설치한 이미지를 직접 만들어 레지스트리(GitLab 컨테이너 레지스트리 등)에 올려 쓴다 |
 | 구체화 방식 | 비교용 데모 4종 | 모델별로 정한다. 무거운 계산은 숨긴 스키마에 테이블로 두고 사용자에게는 얇은 뷰만 여는 계층 분리를 검토한다 |
 | 원천 | 샘플 데이터 | 실제 원천 DB/스키마 확정. 일반 DB는 `USAGE`/`SELECT`, 공유 DB는 `IMPORTED PRIVILEGES` |
 | 비용 | 웨어하우스 1개 공용 | 용도별 웨어하우스 분리, 리소스 모니터(크레딧 상한) 설정 |

@@ -18,6 +18,5 @@ sources:
             data_tests:
               - not_null
               - relationships:
-                  arguments:
-                    to: source('tpch', 'customer')
-                    field: c_custkey
+                  to: source('tpch', 'customer')
+                  field: c_custkey

@@ -1,16 +1,14 @@
 # dbt 검증·배포 파이프라인. Snowflake 접속 비밀번호는 CI 변수 SNOWFLAKE_PASSWORD(Masked)로 받는다.
 # 계정/유저는 profiles.yml의 기본값을 쓴다.
 
-image: python:3.12-slim
+# dbt 공식 이미지(dbt 1.9). 이미지의 기본 진입점이 dbt라서 비워야 스크립트가 실행된다
+image:
+  name: ghcr.io/dbt-labs/dbt-snowflake:1.9.latest
+  entrypoint: [""]
 
 stages:
   - validate
   - deploy
-
-default:
-  before_script:
-    # requirements.txt로 고정한 dbt 버전을 설치
-    - pip install --quiet -r requirements.txt
 
 # MR과 main에서 개발 환경(DBT_DEV.DEV)에 뷰를 만들고 테스트한다
 validate:
