@@ -1,4 +1,4 @@
-# snowflake-dbt
+# dbt-snowflake-ci
 
 Snowflake 위에서 dbt로 SQL 변환을 관리하고, 내부 GitLab CI로 검증·배포하는 프로젝트다.
 원천 데이터는 사용자에게 닫아 두고, dbt가 만든 결과 객체만 조회용 롤에 열어 주는 구조를 검증하려고 만들었다.
@@ -49,7 +49,7 @@ DBT_USER 롤 (조회 전용, 사람 또는 앱 계정에 부여)
 
 ```bash
 # 저장소로 이동
-cd ~/gitlab/snowflake-dbt
+cd dbt-snowflake-ci
 
 # 가상환경 생성 및 활성화
 python3 -m venv .venv && source .venv/bin/activate
@@ -124,7 +124,7 @@ Snowsight의 SQL Worksheet에서 `ACCOUNTADMIN`으로 `setup/01-dbt-setup.sql`�
 
 ```bash
 # 저장소로 이동 (venv 활성화 상태)
-cd ~/gitlab/snowflake-dbt
+cd dbt-snowflake-ci
 
 # 계정 식별자와 유저 (Snowsight의 Account > View account details에서 확인)
 export SNOWFLAKE_ACCOUNT=<org>-<account>
