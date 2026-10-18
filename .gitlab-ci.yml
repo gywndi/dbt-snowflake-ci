@@ -1,5 +1,5 @@
-# dbt 검증·배포 파이프라인. Snowflake 접속 비밀번호는 CI 변수 SNOWFLAKE_PASSWORD(Masked)로 받는다.
-# 계정/유저는 profiles.yml의 기본값을 쓴다.
+# dbt 검증·배포 파이프라인.
+# Snowflake 접속 정보는 CI 변수 SNOWFLAKE_ACCOUNT, SNOWFLAKE_USER, SNOWFLAKE_PASSWORD로 받는다. 코드에는 값이 없다.
 # dbt 관련 파일이 바뀐 경우에만 돈다. 검증은 Slim CI라서 운영 대비 바뀐 모델과 그 하위만 빌드한다.
 
 # dbt 공식 이미지(dbt 1.9). 이미지의 기본 진입점이 dbt라서 비워야 스크립트가 실행된다

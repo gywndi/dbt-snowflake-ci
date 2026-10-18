@@ -211,3 +211,7 @@ dbt 1.9에서 오프라인으로 시험했다. 운영 타깃으로 만든 manife
 | 원천 | 샘플 데이터 | 실제 원천 DB/스키마 확정. 일반 DB는 `USAGE`/`SELECT`, 공유 DB는 `IMPORTED PRIVILEGES` |
 | 비용 | 웨어하우스 1개 공용 | 용도별 웨어하우스 분리, 리소스 모니터(크레딧 상한) 설정 |
 | 가용성 | Vault와 Runner가 같은 k8s | Vault가 sealed면 CI가 멈춘다. 수동 unseal 구조의 영향을 같이 본다 |
+
+## 라이선스
+
+MIT. 자세한 내용은 [LICENSE](LICENSE)를 본다.
