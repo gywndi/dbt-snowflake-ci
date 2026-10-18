@@ -97,8 +97,7 @@ Snowsight의 SQL Worksheet에서 `ACCOUNTADMIN`으로 `setup/01-dbt-setup.sql`�
 | `dev` (기본) | `DBT_DEV.DEV` | 로컬 개발, MR 검증 |
 | `prod` | `DBT_PROD.MART` | `main` 배포 |
 
-- 계정 식별자(`<org>-<account>`)와 유저(`SVC_DBT`)는 `env_var`의 기본값으로 넣었다. 비밀이 아니기 때문이다. 환경변수를 주면 덮어쓴다.
-- 비밀번호는 `SNOWFLAKE_PASSWORD` 환경변수로만 받는다. 파일에는 없다.
+- 계정 식별자(`<org>-<account>`), 유저, 비밀번호는 모두 환경변수(`SNOWFLAKE_ACCOUNT`, `SNOWFLAKE_USER`, `SNOWFLAKE_PASSWORD`)로만 받는다. 파일에는 값이 없다.
 
 ### 모델 (`models/demo/`)
 
@@ -126,6 +125,10 @@ Snowsight의 SQL Worksheet에서 `ACCOUNTADMIN`으로 `setup/01-dbt-setup.sql`�
 ```bash
 # 저장소로 이동 (venv 활성화 상태)
 cd ~/gitlab/snowflake-dbt
+
+# 계정 식별자와 유저 (Snowsight의 Account > View account details에서 확인)
+export SNOWFLAKE_ACCOUNT=<org>-<account>
+export SNOWFLAKE_USER=SVC_DBT
 
 # 비밀번호는 화면에 안 보이게 입력 (셸 히스토리에 남지 않는다)
 read -s "SNOWFLAKE_PASSWORD?비밀번호: " && export SNOWFLAKE_PASSWORD
@@ -163,8 +166,17 @@ dbt 1.9에서 오프라인으로 시험했다. 운영 타깃으로 만든 manife
 
 - 작업 이미지는 dbt 공식 이미지 `ghcr.io/dbt-labs/dbt-snowflake:1.9.latest`다. dbt가 미리 설치되어 있어서 작업마다 `pip install`을 하지 않는다. 이미지의 진입점이 `dbt`라서 `entrypoint: [""]`로 비워 스크립트를 실행한다.
 - Runner는 k8s 클러스터 안의 Kubernetes executor다. CI 작업마다 파드가 하나 떠서 실행하고 사라진다. 태그를 지정하지 않아도 받는다.
-- 비밀번호는 프로젝트 CI 변수 `SNOWFLAKE_PASSWORD`(Masked)로 주입한다. `Protected`는 껐다. MR 파이프라인에서도 써야 해서다.
-- `Masked` 변수는 사용할 수 있는 문자에 제한이 있다. 영문 대소문자와 숫자 위주로 정하면 안전하다.
+- Snowflake 접속 정보는 프로젝트 CI 변수로 주입한다. 코드와 이력에는 값이 없다.
+
+  | 변수 | 값 | 설정 |
+  |---|---|---|
+  | `SNOWFLAKE_ACCOUNT` | `<org>-<account>` | Masked |
+  | `SNOWFLAKE_USER` | 서비스 계정 이름 | Masked |
+  | `SNOWFLAKE_PASSWORD` | 비밀번호 | Masked and hidden(저장 후 값을 다시 볼 수 없다) |
+
+- `Protected`는 MR 파이프라인에서도 변수가 필요해서 켜지 않았다. MR 검증을 쓰지 않는다면 켜서 보호 브랜치에서만 쓰이게 하는 쪽이 안전하다.
+- `Masked` 변수는 사용할 수 있는 문자에 제한이 있다. 값이 거부되면 `Visible`로 두되 계정 식별자는 비밀이 아니다.
+- 프로젝트를 공개할 때는 `Settings > CI/CD > General pipelines`의 공개 파이프라인(Public pipelines)을 끈다. 켜 두면 작업 로그를 누구나 본다.
 
 ## 6. 검증 이력
 
@@ -188,6 +200,7 @@ dbt 1.9에서 오프라인으로 시험했다. 운영 타깃으로 만든 manife
 
 | 항목 | 현재 | 운영에서 필요한 방향 |
 |---|---|---|
+| 공개 저장소 | 접속 정보는 코드에 없고 CI 변수로만 준다 | 서비스 계정 비밀번호 인증은 계정 식별자와 유저 이름을 아는 쪽의 대입 공격에 노출될 수 있다. 키페어 인증이나 네트워크 정책(접속 출처 제한)으로 막는다 |
 | 계정 인증 | `LEGACY_SERVICE` + 비밀번호 | 키페어(`TYPE = SERVICE`) 또는 PAT. 키 회전 절차 포함 |
 | 비밀 관리 | GitLab CI 변수(Masked) | Vault 연동(GitLab ID 토큰으로 로그인, 비밀번호를 Vault에서 읽기). 내장 `secrets:` 키워드는 유료 등급 기능이라 `id_tokens`와 `vault` CLI를 직접 호출하는 방식이 현실적이다 |
 | 배포 롤 분리 | `dev`와 `prod`가 같은 `DBT_APP` | 운영 배포 전용 롤(`DBT_PROD`에만 권한)로 분리해서 MR 파이프라인이 운영을 건드리지 못하게 한다 |
