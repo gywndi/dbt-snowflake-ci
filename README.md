@@ -159,7 +159,9 @@ dbt test
 - 2026-10-18: `SVC_DBT`로 `dbt debug` 연결 점검 통과(CI 로그 `Connection test: OK`).
 - 2026-10-18: GitLab CI 파이프라인에서 `validate`, `deploy` 모두 성공. `DBT_PROD.MART`에 결과 객체가 생기고 Snowsight에서 조회 확인.
 - 2026-10-18: 구체화 방식 데모 모델 4종과 `customer_orders`가 `main` 배포에 포함되어 파이프라인 성공 확인.
-- 확인하지 않은 것: 다이내믹 테이블의 갱신 모드(`INCREMENTAL`/`FULL`), 증분 모델의 두 번째 실행 결과, MR 파이프라인, `DBT_USER` 롤로 원천이 막히는지 여부.
+- 2026-10-18: 다이내믹 테이블 `demo_dynamic`의 갱신 모드는 `FULL`이다. 원천이 공유 DB(`SNOWFLAKE_SAMPLE_DATA`)라서 변경 추적을 켤 수 없어 증분 갱신이 안 된다. 직접 소유한 테이블을 원천으로 쓰면 다시 확인해야 한다.
+- 2026-10-18: CI 작업 이미지를 dbt 공식 이미지(1.9)로 바꿔 파이프라인 전체가 약 100초에서 68초로 줄었다(`pip install` 제거).
+- 확인하지 않은 것: 증분 모델의 두 번째 실행 결과, MR 파이프라인, `DBT_USER` 롤로 원천이 막히는지 여부.
 
 ## 7. 알려진 이슈
 
